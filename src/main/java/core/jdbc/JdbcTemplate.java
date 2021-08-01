@@ -7,14 +7,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class JdbcTemplate {
-    public void update(String sql) throws SQLException {
+public class JdbcTemplate {
+    public void update(String sql, PreparedStatementSetter pss) throws SQLException {
         Connection con = null;
         PreparedStatement pstmt = null;
         try {
             con = ConnectionManager.getConnection();
             pstmt = con.prepareStatement(sql);
-            setValues(pstmt);
+            pss.setParameters(pstmt);
 
             pstmt.executeUpdate();
         } finally {
@@ -28,20 +28,20 @@ public abstract class JdbcTemplate {
         }
     }
 
-    public List query(String sql) throws SQLException {
+    public List query(String sql, PreparedStatementSetter pss, RowMapper rowMapper) throws SQLException {
         Connection con = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
             con = ConnectionManager.getConnection();
             pstmt = con.prepareStatement(sql);
-            setValues(pstmt);
+            pss.setParameters(pstmt);
 
             rs = pstmt.executeQuery();
 
             List<Object> result = new ArrayList<>();
             while (rs.next()) {
-                result.add(mapRow(rs));
+                result.add(rowMapper.mapRow(rs));
             }
             return result;
         } finally {
@@ -57,15 +57,11 @@ public abstract class JdbcTemplate {
         }
     }
 
-    public Object queryForObject(String sql) throws SQLException {
-        List result = query(sql);
+    public Object queryForObject(String sql, PreparedStatementSetter pss, RowMapper rowMapper) throws SQLException {
+        List result = query(sql, pss, rowMapper);
         if (result.isEmpty()) {
             return null;
         }
         return result.get(0);
     }
-
-    protected abstract Object mapRow(ResultSet rs) throws SQLException;
-
-    protected abstract void setValues(PreparedStatement pstmt) throws SQLException;
 }
